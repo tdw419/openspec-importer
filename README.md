@@ -1,61 +1,51 @@
 # OpenSpec Importer
 
-A WordPress plugin that imports OpenSpec markdown documents with YAML frontmatter into WordPress as a searchable knowledge base.
-
-[![WordPress Plugin](https://img.shields.io/badge/WordPress-1.0.0-blue.svg)](https://wordpress.org/plugins/openspec-importer/)
-[![License](https://img.shields.io/badge/license-GPL--2.0--or--later-green.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
-[![PHP](https://img.shields.io/badge/PHP-8.0+-purple.svg)](https://php.net/)
-
-## Description
-
-OpenSpec Importer transforms your markdown specification documents into a beautiful, searchable WordPress knowledge base. Perfect for development teams, project managers, and anyone who wants to publish technical specifications.
-
-**Features:**
-
-* YAML frontmatter parsing with metadata extraction
-* Full markdown to HTML conversion (tables, lists, code blocks)
-* Custom post type (`openspec_doc`) with dedicated archive
-* Automatic document type and project categorization
-* Prism.js syntax highlighting for 12+ languages
-* Smart updates - only re-imports changed files
-* Configurable documents directory via settings
-
-## Requirements
-
-- WordPress 6.0 or higher
-- PHP 8.0 or higher
-- A directory containing markdown files
+Import OpenSpec documents (requirements, design, tasks, proposals) from the `openspec/` folder into WordPress as formatted posts with syntax highlighting.
 
 ## Installation
 
-1. Upload the `openspec-importer` folder to `/wp-content/plugins/`
-2. Activate the plugin through the 'Plugins' menu in WordPress
-3. Go to **Settings > OpenSpec Importer** to configure your documents directory
-4. Navigate to **OpenSpec Docs** to import documents
+1. Copy `openspec-importer` folder to `wp-content/plugins/`
+2. Activate plugin in WordPress admin
+3. Navigate to "OpenSpec Docs" menu item
+
+## Requirements
+
+- PHP 8.0+
+- WordPress 6.0+
+- Filesystem access to the OpenSpec directory
 
 ## Configuration
 
-1. Go to **Settings > OpenSpec Importer**
-2. Enter the path to your markdown documents directory
-   - Use `/absolute/path/to/docs/` for absolute paths
-   - Use `~/relative/to/home/` for paths relative to your home directory
-3. Save changes
+By default, the plugin looks for OpenSpec documents at:
+```
+~/zion/projects/geometry_os/geometry_os/openspec/
+```
 
-You can also use the `OPENSPEC_ROOT` environment variable as a fallback.
+You can override this by setting the `GEOMETRY_OS_ROOT` environment variable:
+```bash
+export GEOMETRY_OS_ROOT=/path/to/geometry_os/geometry_os
+```
+
+## Usage
+
+1. Go to **OpenSpec Docs** in WordPress admin
+2. Click **Import All Documents**
+3. Documents are created as `openspec_doc` custom post type
 
 ## Document Types
 
-The plugin automatically categorizes documents based on filename and path:
+The importer automatically categorizes documents based on filename and path:
 
-| Type | Detection Pattern |
-|------|-------------------|
-| Requirements | Filename contains "requirements" |
-| Design | Filename contains "design" |
-| Tasks | Filename contains "tasks" |
-| Proposal | Filename contains "proposal" or path contains "/proposals/" |
-| Spec | Path contains "/specs/" |
-| Research | Filename contains "research" |
-| Change | Path contains "/changes/" |
+| Type | Color | Pattern |
+|------|-------|---------|
+| Requirements | Blue | `*requirements*.md`, frontmatter `phase: requirements` |
+| Design | Green | `*design*.md`, frontmatter `phase: design` |
+| Tasks | Orange | `*tasks*.md`, frontmatter `phase: tasks` |
+| Proposal | Purple | `*proposal*.md`, `/proposals/` path |
+| Spec | Cyan | `*spec*.md`, `/specs/` path |
+| Research | Brown | `*research*.md` |
+| Change | Red | `/changes/` path |
+| Archived | Gray | `/archive/` path |
 
 ## Custom Post Type
 
@@ -63,61 +53,56 @@ Documents are stored as `openspec_doc` custom post type with:
 
 - Title from frontmatter `title`, first heading, or filename
 - Content formatted with Prism.js syntax highlighting
-- YAML frontmatter preserved and displayable
+- YAML frontmatter preserved and displayed
 
-### Post Meta Fields
+### Post Meta
 
-| Meta Key | Description |
-|----------|-------------|
-| `_openspec_document_id` | Unique ID derived from path |
-| `_openspec_filepath` | Absolute file path |
-| `_openspec_relative_path` | Path from documents root |
-| `_openspec_type` | Document type |
-| `_openspec_filemtime` | File modification time |
-| `_openspec_imported_at` | Import timestamp |
-| `_openspec_frontmatter` | JSON-encoded frontmatter |
+Each imported document has:
+- `_openspec_document_id` - Unique ID derived from path
+- `_openspec_filepath` - Absolute file path
+- `_openspec_relative_path` - Path from openspec root
+- `_openspec_type` - Document type (requirements, design, etc.)
+- `_openspec_filemtime` - File modification time
+- `_openspec_imported_at` - Import timestamp
+- `_openspec_frontmatter` - JSON-encoded frontmatter
 
 ### Taxonomies
 
 - `openspec_type` - Document type taxonomy
 - `openspec_project` - Project name from path
 
-## YAML Frontmatter
+## Features
+
+- Parses YAML frontmatter
+- Markdown to HTML conversion
+- Prism.js syntax highlighting for code blocks
+- Automatic duplicate detection (skips unchanged files)
+- Update detection (updates posts when files change)
+- Table formatting
+- Task list checkboxes
+- Type-based categorization
+
+## Frontmatter Support
 
 The parser recognizes standard YAML frontmatter:
 
 ```yaml
 ---
-title: My Specification
-phase: design
+spec: my-spec-name
+phase: requirements
 created: 2026-02-21
-status: draft
+title: My Spec Title
 ---
 
 # Content starts here
 ```
 
-Supported fields:
-- `title` - Document title (highest priority)
-- `phase` - Document type override
+Supported frontmatter fields:
+- `title` - Document title
+- `phase` - Document type (requirements, design, tasks)
 - `spec` - Spec identifier
-- Any custom fields are preserved in `_openspec_frontmatter`
-
-## Markdown Support
-
-| Feature | Support |
-|---------|---------|
-| Headers (H1-H6) | ✅ |
-| Tables | ✅ |
-| Ordered lists | ✅ |
-| Unordered lists | ✅ |
-| Task lists with checkboxes | ✅ |
-| Fenced code blocks with language | ✅ |
-| Inline code | ✅ |
-| Bold, italic, strikethrough | ✅ |
-| Links and images | ✅ |
-| Blockquotes | ✅ |
-| Horizontal rules | ✅ |
+- `created` - Creation date
+- Any custom fields are preserved
 
 ## REST API
 
@@ -125,68 +110,43 @@ OpenSpec documents are available via WordPress REST API:
 
 ```bash
 # List all documents
-curl https://yoursite.com/wp-json/wp/v2/openspec_doc
+curl http://localhost:8080/wp-json/wp/v2/openspec_doc
+
+# Get specific document
+curl http://localhost:8080/wp-json/wp/v2/openspec_doc/123
 
 # Filter by type
-curl "https://yoursite.com/wp-json/wp/v2/openspec_doc?openspec_type=requirements"
+curl "http://localhost:8080/wp-json/wp/v2/openspec_doc?openspec_type=requirements"
 
 # Filter by project
-curl "https://yoursite.com/wp-json/wp/v2/openspec_doc?openspec_project=my-project"
+curl "http://localhost:8080/wp-json/wp/v2/openspec_doc?openspec_project=my-project"
 ```
 
-## Customization
+## Development
 
-### Add Prism.js Languages
-
-```php
-add_filter('openspec_importer_prism_languages', function($languages) {
-    $languages[] = 'go';
-    $languages[] = 'sql';
-    return $languages;
-});
-```
-
-### Custom CSS
-
-Override these CSS classes in your theme:
-
-- `.openspec-document` - Document container
-- `.openspec-metadata` - Metadata header
-- `.openspec-type-badge` - Type badge
-- `.openspec-content` - Content area
-- `.openspec-code` - Code blocks
-- `.openspec-table` - Tables
-
-## File Structure
+### File Structure
 
 ```
 openspec-importer/
-├── openspec-importer.php          # Main plugin file
-├── includes/
-│   ├── class-markdown-parser.php  # YAML + Markdown parsing
-│   ├── class-html-formatter.php   # HTML conversion
-│   └── class-importer.php         # Import engine
-├── readme.txt                     # WordPress.org readme
-├── uninstall.php                  # Cleanup script
-├── LICENSE                        # GPL v2
-└── README.md                      # This file
+├── openspec-importer.php      # Main plugin file
+├── README.md                   # This file
+└── includes/
+    ├── class-markdown-parser.php  # YAML + Markdown parser
+    ├── class-html-formatter.php   # HTML formatter with syntax highlighting
+    └── class-importer.php         # Import logic with duplicate detection
 ```
 
-## Changelog
+### Customization
 
-### 1.0.0
-- Initial release
-- YAML frontmatter parsing
-- Markdown to HTML conversion
-- Custom post type with taxonomies
-- Prism.js syntax highlighting
-- Configurable documents directory
+To customize the OpenSpec directory path, filter:
 
-## License
+```php
+add_filter('openspec_directory', function($path) {
+    return '/custom/path/to/openspec/';
+});
+```
 
-GPL v2 or later. See [LICENSE](LICENSE) for more information.
+## Related
 
-## Credits
-
-- [Prism.js](https://prismjs.com/) - Syntax highlighting
-- [GitHub Markdown CSS](https://github.com/sindresorhus/github-markdown-css) - Styling inspiration
+- [Claude Conversations Importer](../claude-conversations/) - Import Claude CLI sessions
+- [Geometry OS WebMCP](../geometry-os-webmcp/) - WebMCP integration
